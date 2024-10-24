@@ -1,0 +1,7 @@
+# 包名
+PACKAGE_NAME=com.telenav.scout.launcher,com.telenav.launcher
+# 周期时间（单位：秒）
+INTERVAL=600
+# PC 上保存 hprof 文件的路径
+DESTINATION_PATH=output
+    
