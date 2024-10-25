@@ -4,4 +4,3 @@ PACKAGE_NAME=com.telenav.scout.launcher,com.telenav.launcher
 INTERVAL=600
 # PC 上保存 hprof 文件的路径
 DESTINATION_PATH=output
-    
