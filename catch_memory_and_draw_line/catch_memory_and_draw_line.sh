@@ -25,8 +25,7 @@ mkdir -p "$OUTPUT_DIR"
 
 # 初始化变量
 PREV_PID=""
-OUTPUT_FILE="$OUTPUT_DIR/java_memory_usage.csv"
-echo "timestamp,java_heap_usage" > "$OUTPUT_FILE"
+OUTPUT_FILE=""
 
 # 无限循环，记录内存使用情况
 while true; do
@@ -36,31 +35,41 @@ while true; do
     if [ -z "$PID" ]; then
         echo "未找到包名 $PACKAGE_NAME 对应的进程，等待下次检测..."
     else
-        # 如果进程 ID 变化，生成新的图
-        if [ "$PID" != "$PREV_PID" ]; then
-            if [ -n "$PREV_PID" ]; then  # 检查 PREV_PID 是否非空
-                OUTPUT_FILE="$OUTPUT_DIR/java_memory_usage_$PID.csv"
-                echo "检测到进程 ID 变化: $PID,记录到$OUTPUT_FILE"
-
-                # 绘制内存使用曲线图
-                if [ -f "$OUTPUT_FILE" ]; then
-                    python3 generate_memory_graph.py "$OUTPUT_FILE" "$PREV_PID"
-                fi
-
-                # 重置输出文件，准备记录新的内存数据
-               
-                echo "timestamp,java_heap_usage" > "$OUTPUT_FILE"
-            fi
-            PREV_PID="$PID"  # 更新上一个 PID
+        # 检查是否为第一次记录
+        if [ -z "$PREV_PID" ]; then
+            PREV_PID="$PID"
+            OUTPUT_FILE="$OUTPUT_DIR/java_memory_usage_$PREV_PID.csv"
+            echo "检测到进程 $PID"
+            echo "timestamp,java_heap_usage,native_heap_usage,dalvik_heap_usage" > "$OUTPUT_FILE"
         fi
 
-        # 获取进程的 Java Heap 内存信息，提取已使用的内存 (第一个数值)
-        JAVA_HEAP_USAGE=$(adb shell dumpsys meminfo "$PACKAGE_NAME" | grep "Java Heap" | awk '{print $3}')
+        # 如果进程 ID 变化，生成新的图
+        if [ "$PID" != "$PREV_PID" ]; then
+            echo "检测到进程 ID 变化: $PREV_PID,记录到$OUTPUT_FILE"
+
+            # 绘制内存使用曲线图
+            if [ -f "$OUTPUT_FILE" ]; then
+                python3 generate_memory_graph.py "$OUTPUT_FILE" "$PREV_PID"
+            fi
+
+            # 重置输出文件，准备记录新的内存数据
+            PREV_PID="$PID"
+            OUTPUT_FILE="$OUTPUT_DIR/java_memory_usage_$PREV_PID.csv"
+            echo "timestamp,java_heap_usage,native_heap_usage,dalvik_heap_usage" > "$OUTPUT_FILE"
+        fi
+
+        # 每次获取内存使用情况
+        MEMORY_INFO=$(adb shell dumpsys meminfo "$PACKAGE_NAME")
+
+        # 提取 Java Heap、Native Heap、Dalvik Heap
+        JAVA_HEAP_USAGE=$(echo "$MEMORY_INFO" | grep "Java Heap:" | awk '{print $3}' | tr -d '[:space:]')
+        NATIVE_HEAP_USAGE=$(echo "$MEMORY_INFO" | grep "Native Heap:" | awk '{print $3}' | tr -d '[:space:]')
+        DALVIK_HEAP_USAGE=$(echo "$MEMORY_INFO" | grep "Dalvik Heap" | awk '{print $3}' | tr -d '[:space:]')
 
         # 检查是否成功提取到内存使用数据
         if [[ "$JAVA_HEAP_USAGE" =~ ^[0-9]+$ ]]; then
             # 将当前时间和内存使用值写入输出文件
-            echo "$(date +"%Y-%m-%d %H:%M:%S"),$JAVA_HEAP_USAGE" >> "$OUTPUT_FILE"
+            echo "$(date +'%Y-%m-%d %H:%M:%S'),$JAVA_HEAP_USAGE,$NATIVE_HEAP_USAGE,$DALVIK_HEAP_USAGE" >> "$OUTPUT_FILE"
         else
             echo "Java Heap 内存使用数据无效，跳过本次记录。"
         fi
