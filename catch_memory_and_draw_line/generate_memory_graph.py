@@ -1,40 +1,47 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import sys
+import os
 
-# 预定义的颜色池
-COLOR_POOL = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow']
+# 颜色池
+COLORS = ['b', 'g', 'r', 'c', 'm', 'y']
 
 def generate_graph(output_file, prev_pid):
-    # 读取 CSV 文件，使用适当的列名
-    data = pd.read_csv(output_file, header=None, names=['timestamp', 'java_heap_usage', 'native_heap_usage', 'dalvik_heap_usage', 'pss_usage'], skip_blank_lines=True)
-
-    # 转换时间戳为 datetime 格式，忽略无效的时间戳
+    # 读取 CSV 文件
+    data = pd.read_csv(output_file)
     data['timestamp'] = pd.to_datetime(data['timestamp'], errors='coerce')
-    data = data.dropna(subset=['timestamp'])  # 删除不合法的时间戳行
+    data = data.dropna(subset=['timestamp'])
 
-    # 绘制曲线图
+    # 绘制曲线图并指定每个数据的颜色
     plt.figure(figsize=(10, 6))
+    
+    # 用颜色池循环选择颜色
+    columns_to_plot = [col for col in data.columns if col != 'timestamp']
+    for i, column in enumerate(columns_to_plot):
+        plt.plot(
+            data['timestamp'], 
+            data[column], 
+            marker='o', 
+            linestyle='-', 
+            label=column.replace('_', ' ').title(), 
+            color=COLORS[i % len(COLORS)]
+        )
 
-    color_index = 0  # 用于跟踪当前使用的颜色索引
-
-    # 动态绘制每一列
-    for column in data.columns:
-        if column != 'timestamp':
-            color = COLOR_POOL[color_index % len(COLOR_POOL)]  # 循环使用颜色池中的颜色
-            plt.plot(data['timestamp'], data[column], marker='o', linestyle='-', label=column, color=color)
-            color_index += 1  # 更新颜色索引
-
+    # 标题和标签
     plt.title(f'Memory Usage Over Time (PID: {prev_pid})')
     plt.xlabel('Time')
     plt.ylabel('Memory Usage (KB)')
     plt.xticks(rotation=45)
-    plt.legend()  # 显示图例
-    plt.grid()
-    plt.tight_layout()
+    plt.legend()
 
-    # 保存为 PNG 文件
-    png_file = f"memory_usage_PID_{prev_pid}.png"
+    # 关闭辅助网格线并减少 Y 轴的刻度数量
+    plt.grid(False)  # 禁用网格
+    plt.locator_params(axis='y', nbins=5)  # 限制 Y 轴刻度数量为 5
+
+    # 保存到指定的输出目录
+    output_dir = os.path.dirname(output_file)
+    png_file = os.path.join(output_dir, f"memory_usage_PID_{prev_pid}.png")
+    plt.tight_layout()
     plt.savefig(png_file)
     plt.close()
 
