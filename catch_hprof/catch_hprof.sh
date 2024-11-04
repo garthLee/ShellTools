@@ -40,22 +40,7 @@ if [ -z "$PACKAGE_NAME" ]; then
     exit 1
 fi
 
-# 检查目标文件夹是否存在
-if [ -d "$DESTINATION_PATH" ]; then
-    echo "目标文件夹 $DESTINATION_PATH 已经存在，脚本终止。"
-    exit 1
-fi
 
-if [ ! -d "$DESTINATION_PATH" ]; then
-    echo "目标文件夹 $DESTINATION_PATH 不存在，正在创建..."
-    mkdir -p "$DESTINATION_PATH"
-    if [ $? -eq 0 ]; then
-        echo "成功创建目标文件夹 $DESTINATION_PATH"
-    else
-        echo "无法创建目标文件夹 $DESTINATION_PATH"
-        exit 1
-    fi
-fi
 
 # 无限循环
 while true; do
@@ -72,8 +57,20 @@ while true; do
         filename=${PID}_${TIMESTAMP}.hprof
         HPROF_FILE="/data/local/tmp/$filename"
 
+        if [ ! -d "$DESTINATION_PATH" ]; then
+            echo "目标文件夹 $DESTINATION_PATH 不存在，正在创建..."
+            mkdir -p "$DESTINATION_PATH"
+            if [ $? -eq 0 ]; then
+                echo "成功创建目标文件夹 $DESTINATION_PATH"
+            else
+                echo "无法创建目标文件夹 $DESTINATION_PATH"
+                exit 1
+            fi
+        fi
+
+
         # 生成 HPROF 文件
-        adb shell am dumpheap "$PID" "$HPROF_FILE"
+        adb shell am dumpheap "$PACKAGE_NAME" "$HPROF_FILE"
 
         # 等待生成完成
         FILE_SIZE=-1

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import pandas as pd
 import sys
 import os
@@ -21,7 +22,6 @@ def generate_graph(output_file, prev_pid):
         plt.plot(
             data['timestamp'], 
             data[column], 
-            marker='o', 
             linestyle='-', 
             label=column.replace('_', ' ').title(), 
             color=COLORS[i % len(COLORS)]
@@ -32,7 +32,12 @@ def generate_graph(output_file, prev_pid):
     plt.xlabel('Time')
     plt.ylabel('Memory Usage (KB)')
     plt.xticks(rotation=45)
-    plt.legend()
+    plt.legend(loc='upper left')
+
+    # 旋转 x 轴标签
+    plt.xticks(rotation=45)
+    plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=1))
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m-%d %H:%M"))
 
     # 关闭辅助网格线并减少 Y 轴的刻度数量
     plt.grid(False)  # 禁用网格
